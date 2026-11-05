@@ -69,6 +69,20 @@
         var panels = ws.querySelectorAll(':scope>.panel');
         if (panels.length < 2)
             return;
+        var tabs = ws.querySelectorAll('.ws-tabs button');
+        tabs.forEach(function (b) {
+            b.addEventListener('click', function () {
+                tabs.forEach(function (x) {
+                    x.classList.toggle('on', x === b);
+                });
+                ['wsProblem', 'wsLesson'].forEach(function (id) {
+                    var el = ws.querySelector('#' + id);
+                    if (el)
+                        el.hidden = id !== b.dataset.tab;
+                });
+                panels[0].scrollTop = 0;
+            });
+        });
         var lw = sg('lc-split', '');
         if (lw)
             ws.style.setProperty('--lw', lw);
