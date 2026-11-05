@@ -574,7 +574,7 @@ var ls = v.lastIndexOf('\n', s - 1) +
 
     function problemPanel(d, k) {
         if (!d)
-            return '<div class="empty-pick">Free code mode. Write any C program, add an optional test input below it, and ask Claude to review it.</div>';
+            return '<div class="empty-pick">Free code mode. Write any C program and ask Claude to review it.</div>';
         var e = d.exercises[k - 1];
         var inp = e.input.map(function (x) {
             return '<li>' + x + '</li>';
@@ -589,6 +589,15 @@ return '<div class="ex-head"><span class="no">Day ' + d.day + ' · Exercise ' + 
                 '</ul><h4 class="field-label">Output</h4><ul>' + out + '</ul>' +
 (e.extra ? '<div class="box note">' + e.extra + '</div>' : '') +
                 '</div><h4 class="field-label" style="margin-top:12px">Samples</h4>' + exampleTable(e.examples);
+    }
+
+    function lessonPanel(d) {
+        function sec(label, list, tag) {
+            return '<p class="block-label">' + label + '</p>' + list.map(function (t, i) {
+                return '<section class="lesson"><h3><span class="tag">' + tag + ' ' + (i + 1) + '</span>' + t.title + '</h3>' + parts(t.parts) + '</section>';
+            }).join('');
+        }
+        return '<p class="kicker">Day ' + d.day + ' · ' + esc(d.sub) + '</p>' + sec('Theory', d.theory, 'Section') + sec('Worked examples', d.examples, 'Example');
     }
 
     function pageWorkspace(dn, kn) {
@@ -611,7 +620,6 @@ return '<option value="' + v + '"' + (sel ? ' selected' : '') + '>' +
         var key = d ? d.day + '-' + k : 'free';
         var draft = store.get('lc-draft-' + key, STARTER);
         pendingDraft = draft;
-        var stdin = store.get('lc-stdin-' + key, '');
         var s = d ? isSolved(d.day, k) : false;
 return '<div class="crumb"><a href="#home">Home</a><span>/</span><span>Workspace</span></div><h1>Workspace</h1>' +
             
@@ -619,17 +627,16 @@ return '<div class="crumb"><a href="#home">Home</a><span>/</span><span>Workspace
                 
 '<div class="ws"><section class="panel" aria-label="Problem"><label class="field-label" for="wsPick">Problem</label><select id="wsPick">' +
                 opts + '</select>' +
-            '<div style="margin-top:16px" id="wsProblem">' + problemPanel(d, k) + '</div></section>' +
+            (d ? '<div class="ws-tabs" role="tablist"><button type="button" class="on" data-tab="wsProblem">Problem</button><button type="button" data-tab="wsLesson">Lesson</button></div>' : '') +
+            '<div style="margin-top:16px" id="wsProblem">' + problemPanel(d, k) + '</div>' +
+            (d ? '<div style="margin-top:16px" id="wsLesson" hidden>' + lessonPanel(d) + '</div>' : '') + '</section>' +
 '<section class="panel" aria-label="Code" data-key="' + key +
                 '"><span class="field-label" id="wsLbl">Your code (C)</span>' +
 '<div class="editor"><div class="cb-top"><span>main.c</span><span class="tb"><button class="cbtn" type="button" id="wsFsDn" aria-label="Smaller font">A−</button><button class="cbtn" type="button" id="wsFsUp" aria-label="Larger font">A+</button><button class="cbtn" type="button" id="wsCopy">Copy code</button><button class="cbtn" type="button" id="wsReset">Reset</button></span></div>' +
                 
 '<div class="ed" id="wsEd"></div><div class="ed-status"><span id="wsPos">Ln 1, Col 1</span><span>Tab indents · Ctrl+Enter reviews</span></div></div>' +
                 
-'<label class="field-label" for="wsStdin" style="margin-top:14px">' +
-                (d ? 'Extra test input (optional)' : 'Test input (optional)') + '</label>' +
-'<textarea class="stdin" id="wsStdin" spellcheck="false" placeholder="Claude will also trace this input">' +
-                esc(stdin) + '</textarea>' +
+
 '<div class="actions"><button class="btn primary" type="button" id="wsReview">Review with Claude</button><button class="btn" type="button" id="wsStop" hidden>Stop</button>' +
                 
 (d ? '<button class="btn' + (s ? ' done' : '') + '" type="button" data-solved="' + d.day + '-' + k + '">' + (s ? 'Solved' : 'Mark as solved') + '</button>' : '') +
@@ -721,7 +728,7 @@ p += 'PROBLEM: ' + plain(e.title) + '\n' + plain(e.statement) + '\nInput: ' +
         var btn = document.getElementById('wsReview'), stop = document.getElementById('wsStop');
         var panel = document.querySelector('[data-key]');
         var key = panel.getAttribute('data-key');
-        var code = edit ? edit.getValue() : '', stdin = document.getElementById('wsStdin').value;
+        var code = edit ? edit.getValue() : '', stdin = '';
         if (!code.trim() || code.trim() === STARTER.trim()) {
             out.className = 'result';
             out.innerHTML = '<span class="ph">Write some code first, then ask for a review.</span>';
@@ -788,7 +795,6 @@ out.innerHTML = md(res.text) +
     }
 
     function bindWorkspace() {
-        var stdin = document.getElementById('wsStdin');
         var panel = document.querySelector('[data-key]');
         var key = panel.getAttribute('data-key');
         var fs = store.get('lc-fs', 14);
@@ -805,9 +811,6 @@ out.innerHTML = md(res.text) +
             }
         });
         edit.setFont(fs);
-        stdin.addEventListener('input', function () {
-            store.set('lc-stdin-' + key, stdin.value);
-        });
         document.getElementById('wsFsDn').addEventListener('click', function () {
             fs = Math.max(11, fs - 1);
             store.set('lc-fs', fs);
